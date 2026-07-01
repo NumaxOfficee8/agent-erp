@@ -402,7 +402,9 @@ pub fn run() {
             get_audit_logs,
             initialize_module_db,
             downloader::install_module,
-            downloader::get_installed_modules
+            downloader::get_installed_modules,
+            downloader::get_module_source,
+            downloader::uninstall_module
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

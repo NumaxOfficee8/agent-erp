@@ -10,7 +10,8 @@
     checkForUpdates,
     installUpdate,
     fetchModulesGallery,
-    installModuleAction
+    installModuleAction,
+    uninstallModuleAction
   } from './lib/store.svelte.js';
   import ChatBox from './lib/components/ChatBox.svelte';
   import MutationDialog from './lib/components/MutationDialog.svelte';
@@ -390,14 +391,26 @@
                           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; line-height: 1.3;">{item.description}</p>
                         </div>
                       </div>
-                      <button 
-                        class="btn {isInstalled ? 'btn-secondary' : 'btn-primary'}" 
-                        style="padding: 6px 12px; font-size: 0.8rem; flex-shrink: 0;"
-                        disabled={isInstalled}
-                        onclick={() => installModuleAction(item.id)}
-                      >
-                        {isInstalled ? '已安裝 (Installed)' : '下載安裝'}
-                      </button>
+                      <div style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; align-items: flex-end;">
+                        {#if isInstalled}
+                          <span style="font-size: 0.8rem; color: var(--text-muted); padding: 4px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); font-weight: 500;">已安裝</span>
+                          <button 
+                            class="btn btn-secondary" 
+                            style="padding: 4px 8px; font-size: 0.75rem; border-color: rgba(239, 68, 68, 0.3); color: rgb(239, 68, 68); background: rgba(239, 68, 68, 0.05);"
+                            onclick={() => uninstallModuleAction(item.id)}
+                          >
+                            解除安裝
+                          </button>
+                        {:else}
+                          <button 
+                            class="btn btn-primary" 
+                            style="padding: 6px 12px; font-size: 0.8rem;"
+                            onclick={() => installModuleAction(item.id)}
+                          >
+                            下載安裝
+                          </button>
+                        {/if}
+                      </div>
                     </div>
                   {/each}
                 {/if}

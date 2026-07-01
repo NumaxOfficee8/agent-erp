@@ -190,3 +190,42 @@ pub async fn get_installed_modules(app_handle: AppHandle) -> Result<Vec<ModuleMe
     
     Ok(list)
 }
+
+#[tauri::command]
+pub async fn get_module_source(app_handle: AppHandle, module_id: String) -> Result<String, String> {
+    let target_dir = get_modules_target_dir(&app_handle);
+    let js_path = target_dir.join(format!("{}_module.js", module_id));
+    if !js_path.exists() {
+        return Err(format!("Module source file not found at: {:?}", js_path));
+    }
+    fs::read_to_string(&js_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn uninstall_module(app_handle: AppHandle, module_id: String) -> Result<(), String> {
+    // 1. Delete database entries
+    let db_path = get_db_path(&app_handle);
+    let conn = rusqlite::Connection::open(&db_path)
+        .map_err(|e| format!("Failed to open DB: {}", e))?;
+    
+    conn.execute("DELETE FROM modules WHERE id = ?1", [&module_id])
+        .map_err(|e| format!("Failed to delete module from DB: {}", e))?;
+        
+    // Also drop dynamic tables created by the module (Option B protection)
+    let dynamic_table = format!("module_{}_cache", module_id);
+    let _ = conn.execute(&format!("DROP TABLE IF EXISTS {}", dynamic_table), []);
+    
+    // 2. Delete module files on disk
+    let target_dir = get_modules_target_dir(&app_handle);
+    let js_path = target_dir.join(format!("{}_module.js", module_id));
+    let html_path = target_dir.join(format!("{}_module.html", module_id));
+    
+    if js_path.exists() {
+        let _ = fs::remove_file(js_path);
+    }
+    if html_path.exists() {
+        let _ = fs::remove_file(html_path);
+    }
+    
+    Ok(())
+}

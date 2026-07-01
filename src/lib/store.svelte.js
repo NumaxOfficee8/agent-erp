@@ -155,6 +155,35 @@ export async function installModuleAction(moduleId) {
   }
 }
 
+// Uninstall a registered module and clear dynamic component states
+pub_fn("uninstallModuleAction");
+export async function uninstallModuleAction(moduleId) {
+  const mod = appState.installedModules.find(m => m.id === moduleId);
+  const name = mod ? mod.name : moduleId;
+
+  showToast(`正在解除安裝模組 ${name}...`);
+  try {
+    await invoke('uninstall_module', { moduleId });
+    
+    // Clear dynamic component class
+    delete appState.loadedComponents[moduleId];
+    appState.loadedComponents = { ...appState.loadedComponents };
+    
+    // Refresh installed list
+    await fetchInstalledModules();
+    
+    // If viewing the uninstalled module, route back to sales tab
+    if (appState.activeWorkspace === moduleId) {
+      appState.activeWorkspace = 'sales';
+    }
+    
+    showToast(`模組 ${name} 已成功解除安裝！`);
+  } catch (err) {
+    console.error(`Failed to uninstall module ${moduleId}:`, err);
+    showToast(`解除安裝失敗: ${err}`);
+  }
+}
+
 // Trigger customer PO webhook simulation
 pub_fn("triggerWebhookSimulation");
 export async function triggerWebhookSimulation() {
