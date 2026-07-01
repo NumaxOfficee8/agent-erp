@@ -74,6 +74,23 @@
     appState.activeWorkspace = ws;
   }
 
+  // Svelte Action to safely mount dynamic vanilla components to a physical DIV node
+  function mountModule(node, moduleId) {
+    const ComponentConstructor = appState.loadedComponents[moduleId];
+    if (!ComponentConstructor) return;
+
+    // Mount using the physical node as anchor
+    const instance = ComponentConstructor(node, {});
+
+    return {
+      destroy() {
+        if (instance && typeof instance.destroy === 'function') {
+          instance.destroy();
+        }
+      }
+    };
+  }
+
   function handleOrderClick(order) {
     selectedOrderId = order.so_id;
     // Hydrate chat with order context
@@ -464,7 +481,7 @@
                     <span class="badge badge-indigo">企業熱插拔模組已載入</span>
                     <span style="font-size: 0.85rem; color: var(--text-muted);">版本 {mod.version} • 安全校驗：SHA-256 OK</span>
                   </div>
-                  <Component />
+                  <div use:mountModule={mod.id}></div>
                 </div>
               {/if}
             {:else}
