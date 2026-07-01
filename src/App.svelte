@@ -85,7 +85,10 @@
     <div>
       <div class="brand-section">
         <div class="brand-logo">A</div>
-        <span class="brand-name">AgentERP Edge</span>
+        <div style="display: flex; flex-direction: column;">
+          <span class="brand-name">AgentERP Edge</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">v{appState.version}</span>
+        </div>
       </div>
 
       <nav>
@@ -143,7 +146,7 @@
       </button>
       <div class="connection-ticker">
         <span class="status-dot"></span>
-        <span>邊緣資料庫：SQLite 已連線</span>
+        <span>邊緣資料庫：SQLite 已連線 (v{appState.version})</span>
       </div>
     </div>
   </aside>
