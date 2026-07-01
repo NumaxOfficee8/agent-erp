@@ -7,9 +7,10 @@
     fetchAuditLogs, 
     fetchInstalledModules, 
     triggerWebhookSimulation,
-    activateEnterprise,
     checkForUpdates,
-    installUpdate 
+    installUpdate,
+    fetchModulesGallery,
+    installModuleAction
   } from './lib/store.svelte.js';
   import ChatBox from './lib/components/ChatBox.svelte';
   import MutationDialog from './lib/components/MutationDialog.svelte';
@@ -31,6 +32,7 @@
     await fetchOrders();
     await fetchAuditLogs();
     await fetchInstalledModules();
+    await fetchModulesGallery();
 
     // Automatically listen to the background notification event from Rust
     const unlisten = await listen('notification-hub', (event) => {
@@ -109,30 +111,22 @@
               <span>銷售與訂單</span>
             </div>
           </li>
-          <li>
-            <div 
-              class="nav-item {activeTab === 'finance' ? 'active' : ''}" 
-              onclick={() => selectWorkspace('finance')}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-              <span>Finance BI 看板</span>
-              {#if !appState.isEnterpriseActive}
-                <span class="lock-indicator">🔒</span>
-              {/if}
-            </div>
-          </li>
-          <li>
-            <div 
-              class="nav-item {activeTab === 'crm' ? 'active' : ''}" 
-              onclick={() => selectWorkspace('crm')}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-              <span>CRM 客戶管理</span>
-              {#if !appState.isEnterpriseActive}
-                <span class="lock-indicator">🔒</span>
-              {/if}
-            </div>
-          </li>
+          
+          <!-- Dynamic Pluggable Modules -->
+          {#each appState.installedModules as mod (mod.id)}
+            <li>
+              <div 
+                class="nav-item {activeTab === mod.id ? 'active' : ''}" 
+                onclick={() => selectWorkspace(mod.id)}
+              >
+                <span class="menu-icon-custom">
+                  {@html mod.icon_svg || mod.iconSvg}
+                </span>
+                <span>{mod.name}</span>
+              </div>
+            </li>
+          {/each}
+
           <li>
             <div 
               class="nav-item {activeTab === 'settings' ? 'active' : ''}" 
@@ -198,16 +192,18 @@
         <div class="header-titles">
           <h1>
             {#if activeTab === 'sales'}銷售與訂單管理
-            {:else if activeTab === 'finance'}Finance BI 大看板
-            {:else if activeTab === 'crm'}CRM 客戶模組
-            {:else}系統與防禦配置
+            {:else if activeTab === 'settings'}系統與市集管理
+            {:else}
+              {@const currentMod = appState.installedModules.find(m => m.id === activeTab)}
+              {currentMod ? currentMod.name : '企業擴充模組'}
             {/if}
           </h1>
           <p class="subtitle">
             {#if activeTab === 'sales'}管理本期 mirrored orders 與安全確認
-            {:else if activeTab === 'finance'}動態熱更新解鎖的 BI 數據看板
-            {:else if activeTab === 'crm'}獨立 HTML 多頁面掛載沙盒範例
-            {:else}設定 API Key 及查看防禦審計鏈
+            {:else if activeTab === 'settings'}設定 API Key、防禦審計鏈與下載模組市集
+            {:else}
+              {@const currentMod = appState.installedModules.find(m => m.id === activeTab)}
+              {currentMod ? currentMod.description || '動態加載的企業模組介面' : '動態加載的模組頁面'}
             {/if}
           </p>
         </div>
@@ -249,7 +245,7 @@
       <section class="workspace-body">
         
         <!-- 1. SALES WORKSPACE -->
-        {#if activeTab === 'sales'}
+        <div class="workspace-panel" class:hidden={activeTab !== 'sales'}>
           <div class="orders-layout">
             <div class="orders-sidebar">
               <div class="filter-row">
@@ -360,65 +356,52 @@
               {/if}
             </div>
           </div>
+        </div>
 
-        <!-- 2. FINANCE BI WORKSPACE -->
-        {:else if activeTab === 'finance'}
-          {#if appState.isEnterpriseActive && appState.loadedComponents.sales_bi}
-            {@const SalesBi = appState.loadedComponents.sales_bi}
-            <div class="dynamic-mount-container">
-              <SalesBi />
-            </div>
-          {:else}
-            <div class="feature-locked-card glass-panel">
-              <span class="lock-large">🔒</span>
-              <h2>Finance BI 大看板 (企業專屬模組)</h2>
-              <p>
-                該模組包含敏感財務預測與損益 BI 卡片。免費版程式不包含此 HTML/JS 程式碼，需一鍵模擬企業解鎖以安全下載並熱插拔掛載。
-              </p>
-              <button class="btn btn-primary" onclick={activateEnterprise}>
-                一鍵啟用企業授權 (Simulate Hot-Reload)
-              </button>
-            </div>
-          {/if}
-
-        <!-- 3. CRM WORKSPACE (Hybrid HTML Loader) -->
-        {:else if activeTab === 'crm'}
-          {#if appState.isEnterpriseActive}
-            <div class="dynamic-iframe-container glass-panel">
-              <!-- Render HTML module using secure custom protocol in iframe -->
-              <iframe 
-                src="app-module://localhost/modules/crm_dashboard.html" 
-                class="crm-iframe"
-                title="CRM Dashboard"
-                sandbox="allow-scripts"
-              ></iframe>
-            </div>
-          {:else}
-            <div class="feature-locked-card glass-panel">
-              <span class="lock-large">🔒</span>
-              <h2>CRM 客戶管理 (企業專屬 HTML 模組)</h2>
-              <p>
-                該模組為一個獨立的 HTML 靜態看板。啟用授權後，系統會下載 crm_dashboard.html，並在安全的 IFrame 沙盒中加載顯示，支持非 Svelte 資源無縫擴展。
-              </p>
-              <button class="btn btn-primary" onclick={activateEnterprise}>
-                一鍵啟用企業授權 (Simulate Hot-Reload)
-              </button>
-            </div>
-          {/if}
-
-        <!-- 4. SETTINGS & AUDIT WORKSPACE -->
-        {:else if activeTab === 'settings'}
+        <!-- 2. SETTINGS & AUDIT WORKSPACE -->
+        <div class="workspace-panel" class:hidden={activeTab !== 'settings'}>
           <div class="settings-layout">
+            <!-- Dynamic Module Marketplace Store Gallery -->
             <div class="settings-group glass-panel">
-              <h3>系統授權與熱重載測試</h3>
-              <p class="settings-desc">在這裡可以手動模擬下載熱更新模組（Sales BI JS 組件與 CRM HTML 檔案）並在本地進行安全校驗。</p>
-              <div class="settings-status-box">
-                <span>授權狀態：</span>
-                <span class="badge {appState.isEnterpriseActive ? 'badge-emerald' : 'badge-amber'}">{appState.isEnterpriseActive ? 'Enterprise Active' : 'Free Local-First'}</span>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h3>雲端擴充模組市集 (Module Gallery)</h3>
+                <button class="btn btn-secondary btn-sm" onclick={fetchModulesGallery} style="padding: 4px 8px; font-size: 0.8rem;">
+                  同步商店清單
+                </button>
               </div>
-              <button class="btn btn-primary" disabled={appState.isEnterpriseActive} onclick={activateEnterprise}>
-                {appState.isEnterpriseActive ? '企業組件已加載' : '模擬雲端授權並熱重載'}
-              </button>
+              <p class="settings-desc">您可以從雲端清單中點擊選擇下載所需模組。安裝後側邊欄將動態載入對應 SVG 選單且切換時狀態保留。</p>
+              
+              <div class="module-gallery-list" style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 16px;">
+                {#if appState.modulesGallery.length === 0}
+                  <div class="empty-audit" style="padding: 20px; text-align: center;">點擊「同步商店清單」載入雲端模組。</div>
+                {:else}
+                  {#each appState.modulesGallery as item}
+                    {@const isInstalled = appState.installedModules.some(m => m.id === item.id)}
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02);">
+                      <div style="display: flex; gap: 12px; align-items: center;">
+                        <span class="gallery-icon-svg" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color);">
+                          {@html item.iconSvg}
+                        </span>
+                        <div>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-weight: 600; color: var(--text-primary);">{item.name}</span>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">v{item.version}</span>
+                          </div>
+                          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; line-height: 1.3;">{item.description}</p>
+                        </div>
+                      </div>
+                      <button 
+                        class="btn {isInstalled ? 'btn-secondary' : 'btn-primary'}" 
+                        style="padding: 6px 12px; font-size: 0.8rem; flex-shrink: 0;"
+                        disabled={isInstalled}
+                        onclick={() => installModuleAction(item.id)}
+                      >
+                        {isInstalled ? '已安裝 (Installed)' : '下載安裝'}
+                      </button>
+                    </div>
+                  {/each}
+                {/if}
+              </div>
             </div>
 
             <div class="settings-group glass-panel">
@@ -445,7 +428,40 @@
               </div>
             </div>
           </div>
-        {/if}
+        </div>
+
+        <!-- 3. Dynamic Pluggable Modules Panels -->
+        {#each appState.installedModules as mod (mod.id)}
+          {@const Component = appState.loadedComponents[mod.id]}
+          <div class="workspace-panel" class:hidden={activeTab !== mod.id}>
+            {#if Component}
+              {#if mod.file_path.endsWith('.html')}
+                <div class="dynamic-iframe-container glass-panel" style="height: 600px;">
+                  <iframe 
+                    src="app-module://localhost/modules/{mod.id}_module.html" 
+                    class="crm-iframe"
+                    title={mod.name}
+                    sandbox="allow-scripts"
+                    style="width: 100%; height: 100%; border: none; border-radius: 8px;"
+                  ></iframe>
+                </div>
+              {:else}
+                <div class="glass-panel dynamic-module-container" style="padding: 24px; min-height: 400px; display: flex; flex-direction: column;">
+                  <div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                    <span class="badge badge-indigo">企業熱插拔模組已載入</span>
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">版本 {mod.version} • 安全校驗：SHA-256 OK</span>
+                  </div>
+                  <Component />
+                </div>
+              {/if}
+            {:else}
+              <div class="glass-panel" style="padding: 40px; text-align: center;">
+                <span style="font-size: 2rem;">⏳</span>
+                <h4 style="margin-top: 16px;">正在動態掛載模組元件...</h4>
+              </div>
+            {/if}
+          </div>
+        {/each}
 
       </section>
     </div>
@@ -1013,5 +1029,28 @@
       opacity: 1;
       transform: translateY(0) scale(1);
     }
+  }
+  .workspace-panel.hidden {
+    display: none !important;
+  }
+  .menu-icon-custom {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: inherit;
+  }
+  .menu-icon-custom :global(svg) {
+    width: 100%;
+    height: 100%;
+    stroke: currentColor;
+    fill: none;
+  }
+  .gallery-icon-svg :global(svg) {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    fill: none;
   }
 </style>

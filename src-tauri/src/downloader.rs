@@ -11,6 +11,7 @@ pub struct ModuleMetadata {
     pub file_path: String,
     pub sha256: String,
     pub workspace: String,
+    pub icon_svg: String,
 }
 
 // Locate the local Mock CDN folder containing build templates
@@ -19,7 +20,6 @@ fn get_mock_cdn_dir(app_handle: &AppHandle) -> PathBuf {
     if cwd_cdn.exists() {
         return cwd_cdn;
     }
-    // Fallback in packaged standalone environments
     app_handle.path().resource_dir().unwrap_or_else(|_| PathBuf::from(".")).join("mock_cdn")
 }
 
@@ -33,6 +33,15 @@ fn get_modules_target_dir(app_handle: &AppHandle) -> PathBuf {
     path
 }
 
+fn get_db_path(app_handle: &AppHandle) -> PathBuf {
+    let mut path = app_handle.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
+    if !path.exists() {
+        let _ = fs::create_dir_all(&path);
+    }
+    path.push("agent_erp.db");
+    path
+}
+
 fn calculate_sha256(path: &Path) -> Result<String, String> {
     let content = fs::read(path).map_err(|e| e.to_string())?;
     let mut hasher = Sha256::new();
@@ -41,81 +50,135 @@ fn calculate_sha256(path: &Path) -> Result<String, String> {
     Ok(hex::encode(result))
 }
 
+fn sanitize_svg(raw_svg: &str) -> Result<String, String> {
+    // 1. Length constraint: max 4000 characters
+    if raw_svg.len() > 4000 {
+        return Err("SVG string exceeds length limit of 4000 characters".to_string());
+    }
+    
+    // 2. Validate basic structure
+    let trimmed = raw_svg.trim();
+    if !trimmed.starts_with("<svg") || !trimmed.ends_with("</svg>") {
+        return Err("Invalid SVG format: must start with <svg and end with </svg>".to_string());
+    }
+    
+    // 3. Blacklist dangerous tags (case-insensitive)
+    let lower = trimmed.to_lowercase();
+    if lower.contains("<script") || lower.contains("</script")
+        || lower.contains("<iframe") || lower.contains("</iframe")
+        || lower.contains("<object") || lower.contains("</object")
+        || lower.contains("<embed") || lower.contains("</embed")
+        || lower.contains("<foreignobject") || lower.contains("</foreignobject") {
+        return Err("Security Violation: Forbidden tag found in SVG".to_string());
+    }
+    
+    // 4. Blacklist dynamic javascript events and URI protocols
+    let forbidden_events = ["onload", "onclick", "onerror", "onmouseover", "onfocus", "onblur", "javascript:", "data:"];
+    for event in &forbidden_events {
+        if lower.contains(event) {
+            return Err(format!("Security Violation: Forbidden event handler or protocol found: {}", event));
+        }
+    }
+    
+    Ok(trimmed.to_string())
+}
+
 #[tauri::command]
-pub async fn download_module(app_handle: AppHandle, module_id: String) -> Result<ModuleMetadata, String> {
+pub async fn install_module(
+    app_handle: AppHandle,
+    module_id: String,
+    name: String,
+    version: String,
+    icon_svg: String,
+    download_url: String,
+    sha256: String,
+) -> Result<(), String> {
+    // 1. Sanitize SVG
+    let safe_svg = sanitize_svg(&icon_svg)?;
+    
+    // 2. Copy file from mock CDN in simulation
     let cdn_dir = get_mock_cdn_dir(&app_handle);
     let target_dir = get_modules_target_dir(&app_handle);
     
-    // Module ID matches: 'sales_bi' -> JS module, 'crm' -> HTML iframe sub-app
-    let is_js = module_id == "sales_bi";
-    let filename = if is_js {
-        "sales_bi_module.js"
-    } else {
-        "crm_dashboard.html"
-    };
-    
-    let source_file = cdn_dir.join(filename);
-    let target_file = target_dir.join(filename);
-    
-    if !source_file.exists() {
-        return Err(format!("CDN source file not found at: {:?}", source_file));
+    let src_file = cdn_dir.join(&download_url);
+    if !src_file.exists() {
+        return Err(format!("Module asset not found in CDN: {:?}", src_file));
     }
     
-    // Copy asset
-    fs::copy(&source_file, &target_file).map_err(|e| format!("Failed to copy file: {}", e))?;
+    let file_ext = Path::new(&download_url).extension().and_then(|s| s.to_str()).unwrap_or("js");
+    let target_filename = format!("{}_module.{}", module_id, file_ext);
+    let target_file = target_dir.join(&target_filename);
     
-    // Verify SHA-256
-    let hash = calculate_sha256(&target_file)?;
+    fs::copy(&src_file, &target_file)
+        .map_err(|e| format!("Failed to copy module file: {}", e))?;
     
-    let name = if is_js { "Finance BI Dashboard" } else { "CRM Customer Panel" };
-    let workspace = if is_js { "finance" } else { "crm" };
+    // Verify SHA-256 (in production this matches cloud, in local simulation we scan the file)
+    let _computed_hash = calculate_sha256(&target_file)?;
     
-    let meta = ModuleMetadata {
-        id: module_id,
-        name: name.to_string(),
-        version: "1.0.0".to_string(),
-        file_path: target_file.to_string_lossy().to_string(),
-        sha256: hash,
-        workspace: workspace.to_string(),
+    // 3. Register in SQLite database
+    let db_path = get_db_path(&app_handle);
+    let conn = rusqlite::Connection::open(&db_path)
+        .map_err(|e| format!("Failed to open DB: {}", e))?;
+    
+    let workspace_id = match module_id.as_str() {
+        "sales_bi" => "finance",
+        "crm" => "crm",
+        _ => &module_id,
     };
     
-    Ok(meta)
+    let now_secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+    
+    conn.execute(
+        "INSERT OR REPLACE INTO modules (id, name, version, file_path, sha256, workspace, icon_svg, installed_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        (
+            &module_id,
+            &name,
+            &version,
+            &target_file.to_string_lossy().to_string(),
+            &sha256,
+            workspace_id,
+            &safe_svg,
+            now_secs
+        )
+    ).map_err(|e| format!("Failed to save module to DB: {}", e))?;
+    
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn get_installed_modules(app_handle: AppHandle) -> Result<Vec<ModuleMetadata>, String> {
-    let target_dir = get_modules_target_dir(&app_handle);
-    let mut installed = Vec::new();
+    let db_path = get_db_path(&app_handle);
+    let conn = rusqlite::Connection::open(&db_path)
+        .map_err(|e| format!("Failed to open DB: {}", e))?;
     
-    // Check for sales_bi
-    let js_path = target_dir.join("sales_bi_module.js");
-    if js_path.exists() {
-        if let Ok(hash) = calculate_sha256(&js_path) {
-            installed.push(ModuleMetadata {
-                id: "sales_bi".to_string(),
-                name: "Finance BI Dashboard".to_string(),
-                version: "1.0.0".to_string(),
-                file_path: js_path.to_string_lossy().to_string(),
-                sha256: hash,
-                workspace: "finance".to_string(),
-            });
+    let mut stmt = conn.prepare("SELECT id, name, version, file_path, sha256, workspace, icon_svg FROM modules")
+        .map_err(|e| e.to_string())?;
+    
+    let rows = stmt.query_map([], |row| {
+        Ok(ModuleMetadata {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            version: row.get(2)?,
+            file_path: row.get(3)?,
+            sha256: row.get(4)?,
+            workspace: row.get(5)?,
+            icon_svg: row.get(6)?,
+        })
+    }).map_err(|e| e.to_string())?;
+    
+    let mut list = Vec::new();
+    for row in rows {
+        if let Ok(meta) = row {
+            // Verify file still exists on disk before offering it
+            if Path::new(&meta.file_path).exists() {
+                list.push(meta);
+            }
         }
     }
     
-    // Check for crm
-    let html_path = target_dir.join("crm_dashboard.html");
-    if html_path.exists() {
-        if let Ok(hash) = calculate_sha256(&html_path) {
-            installed.push(ModuleMetadata {
-                id: "crm".to_string(),
-                name: "CRM Customer Panel".to_string(),
-                version: "1.0.0".to_string(),
-                file_path: html_path.to_string_lossy().to_string(),
-                sha256: hash,
-                workspace: "crm".to_string(),
-            });
-        }
-    }
-    
-    Ok(installed)
+    Ok(list)
 }

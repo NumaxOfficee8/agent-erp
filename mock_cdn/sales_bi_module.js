@@ -60,6 +60,21 @@ export default function SalesBI(anchor, props) {
   `;
 
   anchor.appendChild(container);
+
+  // Dynamic SQLite table initialization test (Option B)
+  try {
+    const { invoke } = window.__TAURI__.core;
+    invoke('initialize_module_db', {
+      moduleId: 'sales_bi',
+      createTableSql: 'CREATE TABLE IF NOT EXISTS module_sales_bi_cache (key TEXT PRIMARY KEY, value TEXT)'
+    }).then(() => {
+      console.log('Database table module_sales_bi_cache initialized successfully by sales_bi module!');
+    }).catch(err => {
+      console.error('Failed to initialize database table in sales_bi:', err);
+    });
+  } catch (err) {
+    console.warn('Tauri core invoke not available in this environment:', err);
+  }
   
   // Select DOM Elements
   const slider = container.querySelector('#bi-slider');

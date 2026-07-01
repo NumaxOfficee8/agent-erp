@@ -35,10 +35,14 @@ fn init_db(app_handle: &AppHandle) -> Result<(), String> {
             file_path TEXT NOT NULL,
             sha256 TEXT NOT NULL,
             workspace TEXT NOT NULL,
+            icon_svg TEXT NOT NULL DEFAULT '',
             installed_at INTEGER NOT NULL
         )",
         [],
     ).map_err(|e| format!("Failed to create modules table: {}", e))?;
+
+    // Migration to add icon_svg column to modules if it does not exist
+    let _ = conn.execute("ALTER TABLE modules ADD COLUMN icon_svg TEXT NOT NULL DEFAULT ''", []);
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS mirrored_orders (
@@ -88,6 +92,74 @@ fn init_db(app_handle: &AppHandle) -> Result<(), String> {
         ).map_err(|e| format!("Failed to seed order: {}", e))?;
     }
 
+    Ok(())
+}
+
+// 2. Scoped SQLite Table Initializer Command for Decoupled Modules
+#[tauri::command]
+async fn initialize_module_db(
+    app_handle: AppHandle,
+    module_id: String,
+    create_table_sql: String,
+) -> Result<(), String> {
+    let sql_lower = create_table_sql.to_lowercase();
+    
+    // Strict SQL validation
+    if sql_lower.contains("drop") || sql_lower.contains("alter") || sql_lower.contains("delete") 
+        || sql_lower.contains("insert") || sql_lower.contains("update") {
+        return Err("Security Violation: SQL statement contains forbidden command in table initialization".to_string());
+    }
+    
+    if !sql_lower.trim().starts_with("create table") {
+        return Err("Security Violation: SQL query must start with CREATE TABLE".to_string());
+    }
+    
+    let system_tables = ["modules", "mirrored_orders", "audit_logs"];
+    for table in &system_tables {
+        if sql_lower.contains(table) {
+            return Err(format!("Security Violation: Forbidden system table name detected: {}", table));
+        }
+    }
+    
+    // Parse and verify table name prefix: "module_{module_id}_"
+    let tokens: Vec<&str> = create_table_sql.split_whitespace().collect();
+    let mut table_name = "";
+    for i in 0..tokens.len() {
+        let token = tokens[i].to_lowercase();
+        if token == "table" {
+            if i + 1 < tokens.len() {
+                let next = tokens[i+1];
+                if next.to_lowercase() == "if" && i + 3 < tokens.len() && tokens[i+2].to_lowercase() == "not" && tokens[i+3].to_lowercase() == "exists" {
+                    if i + 4 < tokens.len() {
+                        table_name = tokens[i+4];
+                    }
+                } else {
+                    table_name = next;
+                }
+            }
+            break;
+        }
+    }
+    
+    let cleaned_table_name = table_name.trim_matches(|c: char| c == '(' || c == ')' || c == ';' || c.is_whitespace());
+    let prefix = format!("module_{}_", module_id);
+    
+    if !cleaned_table_name.starts_with(&prefix) {
+        return Err(format!(
+            "Security Violation: Table name '{}' must start with prefix '{}' for module '{}'",
+            cleaned_table_name, prefix, module_id
+        ));
+    }
+    
+    // Open DB and execute CREATE TABLE statement
+    let db_path = get_db_path(&app_handle);
+    let conn = rusqlite::Connection::open(&db_path)
+        .map_err(|e| format!("Failed to open DB: {}", e))?;
+    
+    conn.execute(&create_table_sql, [])
+        .map_err(|e| format!("Database migration failed: {}", e))?;
+    
+    println!("Module '{}' dynamically initialized table '{}'", module_id, cleaned_table_name);
     Ok(())
 }
 
@@ -289,11 +361,22 @@ pub fn run() {
                 return Response::builder().status(404).body(Vec::new()).unwrap();
             }
 
-            // Determine mime type based on extension
-            let mime_type = if file_path.to_string_lossy().ends_with(".js") {
+            // Determine MIME type based on extension
+            let path_str = file_path.to_string_lossy().to_lowercase();
+            let mime_type = if path_str.ends_with(".js") {
                 "application/javascript"
-            } else if file_path.to_string_lossy().ends_with(".html") {
+            } else if path_str.ends_with(".html") {
                 "text/html"
+            } else if path_str.ends_with(".css") {
+                "text/css"
+            } else if path_str.ends_with(".png") {
+                "image/png"
+            } else if path_str.ends_with(".jpg") || path_str.ends_with(".jpeg") {
+                "image/jpeg"
+            } else if path_str.ends_with(".webp") {
+                "image/webp"
+            } else if path_str.ends_with(".svg") {
+                "image/svg+xml"
             } else {
                 "application/octet-stream"
             };
@@ -315,7 +398,8 @@ pub fn run() {
             confirm_mutation,
             get_mirrored_orders,
             get_audit_logs,
-            downloader::download_module,
+            initialize_module_db,
+            downloader::install_module,
             downloader::get_installed_modules
         ])
         .run(tauri::generate_context!())

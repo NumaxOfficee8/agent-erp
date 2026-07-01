@@ -32,7 +32,8 @@ export const appState = $state({
   updateStatus: 'idle', // 'idle' | 'checking' | 'downloading' | 'finished' | 'up-to-date'
   updateProgress: { percent: 0, downloaded: 0, total: 100 },
   activeUpdate: null, // Tauri updater instance
-  toastMessage: null // Toast popup message
+  toastMessage: null, // Toast popup message
+  modulesGallery: [] // List of available modules in cloud store
 });
 
 export function showToast(message) {
@@ -83,6 +84,74 @@ export async function fetchInstalledModules() {
     }
   } catch (err) {
     console.error("Failed to fetch installed modules:", err);
+  }
+}
+
+// Fetch all available modules in the cloud gallery store
+pub_fn("fetchModulesGallery");
+export async function fetchModulesGallery() {
+  try {
+    let list = [];
+    try {
+      const response = await fetch('https://numaxofficee8.github.io/agent-erp/modules_gallery.json');
+      if (response.ok) {
+        list = await response.json();
+      } else {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch cloud modules gallery, using mock local catalogue:", e);
+      // Local fallback catalogue for mock testing
+      list = [
+        {
+          id: 'sales_bi',
+          name: 'Finance BI 大看板',
+          version: '1.0.2',
+          description: '提供即時的銷售數據分析、獲利預測與動態利潤控制工具。',
+          iconSvg: '<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"18\" y1=\"20\" x2=\"18\" y2=\"10\"></line><line x1=\"12\" y1=\"20\" x2=\"12\" y2=\"4\"></line><line x1=\"6\" y1=\"20\" x2=\"6\" y2=\"14\"></line></svg>',
+          downloadUrl: 'sales_bi_module.js',
+          sha256: 'mock-sha-sales-bi'
+        },
+        {
+          id: 'crm',
+          name: 'CRM 客戶模組',
+          version: '1.0.1',
+          description: '企業級客戶關係管理，支援獨立沙盒與靜態 HTML 加載。',
+          iconSvg: '<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2\"></path><circle cx=\"9\" cy=\"7\" r=\"4\"></circle><path d=\"M23 21v-2a4 4 0 0 0-3-3.87\"></path><path d=\"M16 3.13a4 4 0 0 1 0 7.75\"></path></svg>',
+          downloadUrl: 'crm_dashboard.html',
+          sha256: 'mock-sha-crm'
+        }
+      ];
+    }
+    appState.modulesGallery = list;
+  } catch (err) {
+    console.error("Failed to fetch modules gallery:", err);
+  }
+}
+
+// Download and install a specific module from the store
+pub_fn("installModuleAction");
+export async function installModuleAction(moduleId) {
+  const mod = appState.modulesGallery.find(m => m.id === moduleId);
+  if (!mod) return;
+
+  showToast(`正在下載安裝模組 ${mod.name}...`);
+  try {
+    await invoke('install_module', {
+      moduleId: mod.id,
+      name: mod.name,
+      version: mod.version,
+      iconSvg: mod.iconSvg,
+      downloadUrl: mod.downloadUrl,
+      sha256: mod.sha256
+    });
+
+    // Refresh installed list to dynamically mount Svelte component
+    await fetchInstalledModules();
+    showToast(`模組 ${mod.name} 安裝成功！選單已更新。`);
+  } catch (err) {
+    console.error(`Failed to install module ${mod.name}:`, err);
+    showToast(`模組安裝失敗: ${err}`);
   }
 }
 
