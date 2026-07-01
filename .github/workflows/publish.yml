@@ -68,18 +68,40 @@ jobs:
         with:
           node-version: 22
 
-      - name: Generate and Update Manifest
+      - name: Install Octokit client
+        run: npm install @octokit/rest
+
+      - name: Generate update.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: node scripts/update-manifest.js
+
+      - name: Deploy update.json to gh-pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          # 1. Fetch release details from GitHub API to get download asset links and signatures
-          # 2. Re-write update.json file containing version, pub_date, and signatures
-          # 3. Commit update.json and push to gh-pages branch to deploy to GitHub Pages
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          echo "GitHub Release published successfully for tag $TAG_NAME."
-          echo "Next Step: Deploy the generated update.json manifest to GitHub Pages to trigger auto-updates."
+          # Save update.json in a safe place
+          mv update.json ../update.json
           
-          # Note: The tauri-action automatically uploads the signature files (.sig) to the release.
-          # A simple custom script or GitHub Actions task can download these signature files, 
-          # format the update.json, and push it to the gh-pages branch.
+          # Fetch and checkout gh-pages branch
+          git fetch origin gh-pages || true
+          if git show-ref --quiet refs/remotes/origin/gh-pages; then
+            git checkout gh-pages
+            git pull origin gh-pages
+          else
+            git checkout --orphan gh-pages
+            git rm -rf .
+          fi
+          
+          # Copy update.json back
+          mv ../update.json update.json
+          
+          # Commit and push
+          git add update.json
+          git commit -m "docs: auto update manifest to $TAG_NAME" || exit 0
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages --force
