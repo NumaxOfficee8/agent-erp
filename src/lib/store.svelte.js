@@ -31,8 +31,16 @@ export const appState = $state({
   updateNotes: '',
   updateStatus: 'idle', // 'idle' | 'checking' | 'downloading' | 'finished' | 'up-to-date'
   updateProgress: { percent: 0, downloaded: 0, total: 100 },
-  activeUpdate: null // Tauri updater instance
+  activeUpdate: null, // Tauri updater instance
+  toastMessage: null // Toast popup message
 });
+
+export function showToast(message) {
+  appState.toastMessage = message;
+  setTimeout(() => {
+    appState.toastMessage = null;
+  }, 3500);
+}
 
 // Fetch mirrored order list from SQLite
 pub_fn("fetchOrders");
@@ -156,9 +164,9 @@ export async function activateEnterprise() {
 }
 
 // Query public update manifest URL
-pub_fn("checkForUpdates");
 export async function checkForUpdates() {
   appState.updateStatus = 'checking';
+  showToast("正在連線雲端檢查更新...");
   try {
     const update = await check();
     if (update && update.available) {
@@ -166,16 +174,18 @@ export async function checkForUpdates() {
       appState.updateStatus = 'idle';
       appState.updateNotes = update.body || '安全升級與效能優化版本。';
       appState.activeUpdate = update;
+      showToast("偵測到新版本！已於首頁載入更新橫幅。");
       
       // Dispatch alert to notifications hub
       appState.notifications.unshift({
         id: 'notify-update',
-        title: '主程式更新可用 v0.2.0',
+        title: `主程式更新可用 v${update.version || '0.2.0'}`,
         message: 'Tauri 邊緣端主程式已有新版本，請前往首頁進行安全下載更新。'
       });
     } else {
       appState.updateAvailable = false;
       appState.updateStatus = 'up-to-date';
+      showToast(`主程式已是最新版本 (v${appState.version})！無需更新。`);
     }
   } catch (err) {
     console.warn("Tauri updater connection failed, falling back to local simulation:", err);
@@ -183,6 +193,7 @@ export async function checkForUpdates() {
     appState.updateAvailable = true;
     appState.updateNotes = "主要優化：\n1. 優化 Svelte 5 Runes 渲染引擎\n2. 升級 Rust 邊緣 SQLite 加密協議 (SQLCipher)\n3. 修正 Windows/macOS 系統更新偶發閃退問題。";
     appState.updateStatus = 'idle';
+    showToast("已進入模擬測試：已載入模擬更新資訊。");
   }
 }
 

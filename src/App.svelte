@@ -458,6 +458,16 @@
 <!-- Security Confirmation dialog (Mutation Interceptor) -->
 <MutationDialog />
 
+<!-- Toast Popup Notification (UX feedback for update checker) -->
+{#if appState.toastMessage}
+  <div class="toast-popup glass-panel">
+    <div class="toast-body">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: rgb(74, 222, 128);"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span>{appState.toastMessage}</span>
+    </div>
+  </div>
+{/if}
+
 <style>
   /* Local layout classes */
   .workspace-header {
@@ -968,5 +978,40 @@
 
   @keyframes spin {
     to { transform: rotate(360deg); }
+  }
+
+  /* Toast Popup Styles */
+  .toast-popup {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(18, 18, 18, 0.75);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .toast-body {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 </style>
