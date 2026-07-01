@@ -464,26 +464,24 @@
         {#each appState.installedModules as mod (mod.id)}
           {@const Component = appState.loadedComponents[mod.id]}
           <div class="workspace-panel" class:hidden={activeTab !== mod.id}>
-            {#if Component}
-              {#if mod.file_path.endsWith('.html')}
-                <div class="dynamic-iframe-container glass-panel" style="height: 600px;">
-                  <iframe 
-                    src="app-module://localhost/modules/{mod.id}_module.html" 
-                    class="crm-iframe"
-                    title={mod.name}
-                    sandbox="allow-scripts"
-                    style="width: 100%; height: 100%; border: none; border-radius: 8px;"
-                  ></iframe>
+            {#if mod.file_path.endsWith('.html')}
+              <div class="dynamic-iframe-container glass-panel" style="height: 600px;">
+                <iframe 
+                  src="app-module://localhost/modules/{mod.id}_module.html" 
+                  class="crm-iframe"
+                  title={mod.name}
+                  sandbox="allow-scripts"
+                  style="width: 100%; height: 100%; border: none; border-radius: 8px;"
+                ></iframe>
+              </div>
+            {:else if Component}
+              <div class="glass-panel dynamic-module-container" style="padding: 24px; min-height: 400px; display: flex; flex-direction: column;">
+                <div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                  <span class="badge badge-indigo">企業熱插拔模組已載入</span>
+                  <span style="font-size: 0.85rem; color: var(--text-muted);">版本 {mod.version} • 安全校驗：SHA-256 OK</span>
                 </div>
-              {:else}
-                <div class="glass-panel dynamic-module-container" style="padding: 24px; min-height: 400px; display: flex; flex-direction: column;">
-                  <div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
-                    <span class="badge badge-indigo">企業熱插拔模組已載入</span>
-                    <span style="font-size: 0.85rem; color: var(--text-muted);">版本 {mod.version} • 安全校驗：SHA-256 OK</span>
-                  </div>
-                  <div use:mountModule={mod.id}></div>
-                </div>
-              {/if}
+                <div use:mountModule={mod.id}></div>
+              </div>
             {:else}
               <div class="glass-panel" style="padding: 40px; text-align: center;">
                 <span style="font-size: 2rem;">⏳</span>
