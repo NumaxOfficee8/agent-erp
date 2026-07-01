@@ -21,6 +21,13 @@
 
   // Initialize data on mount
   onMount(async () => {
+    try {
+      const { getVersion } = await import('@tauri-apps/api/app');
+      appState.version = await getVersion();
+    } catch (err) {
+      console.warn("Failed to fetch version from Tauri:", err);
+    }
+
     await fetchOrders();
     await fetchAuditLogs();
     await fetchInstalledModules();
