@@ -76,9 +76,23 @@ async function run() {
     }
   }
 
-  // 3. Write manifest file
+  // 3. Write updater manifest file
   fs.writeFileSync("update.json", JSON.stringify(manifest, null, 2));
   console.log("Successfully generated update.json:\n", JSON.stringify(manifest, null, 2));
+
+  // 4. Write install manifest file (direct download links for users/landing portals)
+  const installManifest = {
+    version,
+    pub_date: release.published_at,
+    installers: {
+      "mac-dmg-aarch64": assets.find(a => a.name.endsWith(".dmg") && a.name.includes("aarch64"))?.browser_download_url || "",
+      "mac-dmg-x64": assets.find(a => a.name.endsWith(".dmg") && a.name.includes("x64"))?.browser_download_url || "",
+      "windows-msi": assets.find(a => a.name.endsWith(".msi"))?.browser_download_url || "",
+      "windows-exe": assets.find(a => a.name.endsWith(".exe") && !a.name.endsWith(".sig"))?.browser_download_url || ""
+    }
+  };
+  fs.writeFileSync("install.json", JSON.stringify(installManifest, null, 2));
+  console.log("Successfully generated install.json:\n", JSON.stringify(installManifest, null, 2));
 }
 
 run().catch(err => {
