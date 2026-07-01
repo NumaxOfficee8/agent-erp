@@ -1,0 +1,38 @@
+# Node.js and Frontend Bundles
+node_modules/
+dist/
+dist-ssr/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Rust / Cargo Output
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Local SQLite Database Files (Development Fallbacks)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+agent_erp.db
+
+# Security & Private Credentials
+*.key
+*.pub
+.env
+.env*.local
+
+# Editor and OS Specific files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

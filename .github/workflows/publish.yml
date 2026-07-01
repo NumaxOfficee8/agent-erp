@@ -1,0 +1,85 @@
+name: "Publish Release"
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest" # For Apple Silicon and Intel macOS
+            args: "--target aarch64-apple-darwin"
+          - platform: "windows-latest" # For Windows x64
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # In Tauri v2 we build for targets specified in target args
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: install frontend dependencies
+        run: npm ci
+
+      - name: build Svelte frontend & Tauri shell
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "AgentERP Shell ${{ github.ref_name }}"
+          releaseBody: "Automated desktop package release for version ${{ github.ref_name }}. Contains Svelte 5 hot-reload dynamic module capabilities."
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+
+  update-manifest:
+    needs: publish-tauri
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate and Update Manifest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          # 1. Fetch release details from GitHub API to get download asset links and signatures
+          # 2. Re-write update.json file containing version, pub_date, and signatures
+          # 3. Commit update.json and push to gh-pages branch to deploy to GitHub Pages
+          
+          echo "GitHub Release published successfully for tag $TAG_NAME."
+          echo "Next Step: Deploy the generated update.json manifest to GitHub Pages to trigger auto-updates."
+          
+          # Note: The tauri-action automatically uploads the signature files (.sig) to the release.
+          # A simple custom script or GitHub Actions task can download these signature files, 
+          # format the update.json, and push it to the gh-pages branch.
