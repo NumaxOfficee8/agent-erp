@@ -1,17 +1,18 @@
 const { Octokit } = require("@octokit/rest");
 const fs = require("fs");
-const { execSync } = require("child_process");
 
 async function run() {
   const token = process.env.GITHUB_TOKEN;
   const tag = process.env.TAG_NAME; // e.g. "v0.1.0"
-  const version = tag.replace(/^v/, "");
-  const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
+  const repoFullName = process.env.GITHUB_REPOSITORY;
   
-  if (!token || !tag || !owner || !repo) {
+  if (!token || !tag || !repoFullName) {
     console.error("Missing required environment variables.");
     process.exit(1);
   }
+
+  const [owner, repo] = repoFullName.split("/");
+  const version = tag.replace(/^v/, "");
 
   console.log(`Fetching release assets for tag: ${tag} (${owner}/${repo})...`);
   const octokit = new Octokit({ auth: token });
@@ -55,10 +56,6 @@ async function run() {
         const downloadUrl = packageAsset.browser_download_url;
 
         // Map signatures to Tauri expected platform keys
-        // Tauri v2 expected keys:
-        // - darwin-aarch64 (macOS Apple Silicon)
-        // - darwin-x86_64 (macOS Intel)
-        // - windows-x86_64 (Windows 64-bit)
         if (packageName.endsWith(".app.tar.gz") && packageName.includes("aarch64")) {
           manifest.platforms["darwin-aarch64"] = { signature, url: downloadUrl };
         } else if (packageName.endsWith(".app.tar.gz") && packageName.includes("x64")) {
