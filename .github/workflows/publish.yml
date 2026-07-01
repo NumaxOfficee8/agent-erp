@@ -110,6 +110,10 @@ jobs:
           # Save update.json in a safe place
           mv update.json ../update.json
           
+          # Discard local changes from npm install (e.g. package-lock.json)
+          git reset --hard
+          git clean -fd
+          
           # Fetch and checkout gh-pages branch
           git fetch origin gh-pages || true
           if git show-ref --quiet refs/remotes/origin/gh-pages; then
