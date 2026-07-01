@@ -1,15 +1,15 @@
 {
-  "version": "0.1.6",
-  "notes": "Automated desktop package release for version v0.1.6. Contains Svelte 5 hot-reload dynamic module capabilities.",
-  "pub_date": "2026-07-01T04:06:24Z",
+  "version": "0.1.7",
+  "notes": "Automated desktop package release for version v0.1.7. Contains Svelte 5 hot-reload dynamic module capabilities.",
+  "pub_date": "2026-07-01T04:50:28Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRU2svK3dBWmNOOFpyOTcva1ptQ25oQTNtMUhUTWZVV1ppbGxhR2FXWGdKVit4dGhYU1VtZnVhQkFZOG1oWjVaalRUL2VnUWVsVGUvWXZQTFY3TzNoU3RnVlFxelRZV2dnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyODc4OTQ4CWZpbGU6ZXJwLWFnZW50XzAuMS42X3g2NF9lbi1VUy5tc2kKQW9vMnhqRHZRSTBzdUpXT05pTkR2K1ZscElHeHdGc0k5NFc1bElPTFgvbEhVVnA2U2krdVlSTUtiT3NvSkFKZlkzdmJaQ29KaFBHSWgyV3lOOE5hQ0E9PQo=",
-      "url": "https://github.com/NumaxOfficee8/agent-erp/releases/download/v0.1.6/erp-agent_0.1.6_x64_en-US.msi"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRU2svK3dBWmNOOFhYdGRZcWtiMk1YTERZdnBpZFlnVkhyZW5ZZDRISjdhdFY2bHdhUU1UZW5pSHphaXZhNGhEMzI4d0UxeHU5OVlxYklkZzBGR2RDOTliVmZrL2ppMmdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyODgxNjQxCWZpbGU6ZXJwLWFnZW50XzAuMS43X3g2NF9lbi1VUy5tc2kKcXUxbDQ4cUsxYUd3azRXZ0lIdUl4aE5tQWliNkduNTUraWZVNmRCV3F0dEk3UW04elBIUFUyT3pIdEJFeXdLUzRzWGNIbUp0K3l3Vkt1UGh5dEkzREE9PQo=",
+      "url": "https://github.com/NumaxOfficee8/agent-erp/releases/download/v0.1.7/erp-agent_0.1.7_x64_en-US.msi"
     },
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRU2svK3dBWmNOOFFJL3JJdXBrSG5RYU1EWUFCejNlOWdveUxCWjRaTVo2S3Z3YjZYSVhtT0NlYTRjd21pSFVhc29KWFgrL3BKeXNIZTA1RTgrTlc4R0hDMWdXdW5xRkFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyODc4NzgzCWZpbGU6ZXJwLWFnZW50LmFwcC50YXIuZ3oKQnBtbjR6TWlwZnBib3lmNDlDbElSMFNZMjdwTXhyN2NISUpZTUtTbWMrM0NtYUpZOW1odUdHT0pqWUJQRjJrekxhcXYvcjJRanFiODZ2VUdRblNmQ0E9PQo=",
-      "url": "https://github.com/NumaxOfficee8/agent-erp/releases/download/v0.1.6/erp-agent_aarch64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRU2svK3dBWmNOOFVGY0tDQ1VVTTlUd3ArTTg3T0NUMlM5QnJJOTMzRGZqdlRlcElVZm1XcWdrdXFabUJTMEJVcFZISVNnVGFmY3RhOXRzckU3ZEZkYkkxK2JIa1l2bWcwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyODgxNDI3CWZpbGU6ZXJwLWFnZW50LmFwcC50YXIuZ3oKajJPMHN0Mm03aWJ5SEExUUxuTGdFR2cyNTlSREpkM04rdjA0a1p2SktjSzdSaVptTzR3MHFCV3A0NmQ0RjZicldIWk53OHgwT293L0JsUzY0MXdTQ3c9PQo=",
+      "url": "https://github.com/NumaxOfficee8/agent-erp/releases/download/v0.1.7/erp-agent_aarch64.app.tar.gz"
     }
   }
 }

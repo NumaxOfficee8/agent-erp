@@ -1,10 +1,10 @@
 {
-  "version": "0.1.6",
-  "pub_date": "2026-07-01T04:06:24Z",
+  "version": "0.1.7",
+  "pub_date": "2026-07-01T04:50:28Z",
   "installers": {
-    "mac-dmg-aarch64": "https://github.com/NumaxOfficee8/agent-erp/releases/download/v0.1.6/erp-agent_0.1.6_aarch64.dmg",
+    "mac-dmg-aarch64": "https://github.com/NumaxOfficee8/agent-erp/releases/download/v0.1.7/erp-agent_0.1.7_aarch64.dmg",
     "mac-dmg-x64": "",
-    "windows-msi": "https://github.com/NumaxOfficee8/agent-erp/releases/download/v0.1.6/erp-agent_0.1.6_x64_en-US.msi",
-    "windows-exe": "https://github.com/NumaxOfficee8/agent-erp/releases/download/v0.1.6/erp-agent_0.1.6_x64-setup.exe"
+    "windows-msi": "https://github.com/NumaxOfficee8/agent-erp/releases/download/v0.1.7/erp-agent_0.1.7_x64_en-US.msi",
+    "windows-exe": "https://github.com/NumaxOfficee8/agent-erp/releases/download/v0.1.7/erp-agent_0.1.7_x64-setup.exe"
   }
 }
