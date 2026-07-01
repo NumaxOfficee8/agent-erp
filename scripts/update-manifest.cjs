@@ -60,8 +60,17 @@ async function run() {
           manifest.platforms["darwin-aarch64"] = { signature, url: downloadUrl };
         } else if (packageName.endsWith(".app.tar.gz") && packageName.includes("x64")) {
           manifest.platforms["darwin-x86_64"] = { signature, url: downloadUrl };
-        } else if (packageName.endsWith(".zip") || packageName.endsWith(".nsis.zip")) {
-          manifest.platforms["windows-x86_64"] = { signature, url: downloadUrl };
+        } else if (
+          packageName.endsWith(".zip") ||
+          packageName.endsWith(".nsis.zip") ||
+          packageName.endsWith(".msi") ||
+          packageName.endsWith(".exe")
+        ) {
+          const current = manifest.platforms["windows-x86_64"];
+          const isBetterFormat = packageName.endsWith(".msi") || packageName.endsWith(".zip") || packageName.endsWith(".nsis.zip");
+          if (!current || isBetterFormat) {
+            manifest.platforms["windows-x86_64"] = { signature, url: downloadUrl };
+          }
         }
       }
     }
