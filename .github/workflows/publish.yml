@@ -27,6 +27,28 @@ jobs:
         with:
           node-version: 22
 
+      - name: sync version from git tag
+        run: |
+          node -e '
+            const fs = require("fs");
+            const tag = process.env.GITHUB_REF_NAME || "v0.0.0";
+            const version = tag.replace(/^refs\/tags\/v/, "").replace(/^v/, "");
+            
+            // Sync tauri.conf.json
+            const confPath = "src-tauri/tauri.conf.json";
+            const conf = JSON.parse(fs.readFileSync(confPath, "utf8"));
+            conf.version = version;
+            fs.writeFileSync(confPath, JSON.stringify(conf, null, 2));
+            console.log("Synced " + confPath + " version to " + version);
+            
+            // Sync Cargo.toml
+            const tomlPath = "src-tauri/Cargo.toml";
+            let toml = fs.readFileSync(tomlPath, "utf8");
+            toml = toml.replace(/^version\s*=\s*"[^"]+"/m, "version = \"" + version + "\"");
+            fs.writeFileSync(tomlPath, toml);
+            console.log("Synced " + tomlPath + " version to " + version);
+          '
+
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
