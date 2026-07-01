@@ -357,6 +357,8 @@ pub fn run() {
             let mut file_path = app_handle.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("data"));
             file_path.push(path);
 
+            println!("[Scheme Handler] Request Path: '{}', Resolved path: {:?}, Exists: {}", path, file_path, file_path.exists());
+
             if !file_path.exists() {
                 return Response::builder().status(404).body(Vec::new()).unwrap();
             }
