@@ -16,10 +16,18 @@ pub struct ModuleMetadata {
 
 // Locate the local Mock CDN folder containing build templates
 fn get_mock_cdn_dir(app_handle: &AppHandle) -> PathBuf {
-    let cwd_cdn = PathBuf::from("mock_cdn");
-    if cwd_cdn.exists() {
-        return cwd_cdn;
+    let paths_to_try = [
+        PathBuf::from("mock_cdn"),
+        PathBuf::from("../mock_cdn"),
+        PathBuf::from("../../mock_cdn"),
+        PathBuf::from("../../../mock_cdn"),
+    ];
+    for path in &paths_to_try {
+        if path.exists() {
+            return path.clone();
+        }
     }
+    // Fallback in packaged standalone environments
     app_handle.path().resource_dir().unwrap_or_else(|_| PathBuf::from(".")).join("mock_cdn")
 }
 
