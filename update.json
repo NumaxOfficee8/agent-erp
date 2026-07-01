@@ -1,11 +1,15 @@
 {
-  "version": "0.1.3",
-  "notes": "Automated desktop package release for version v0.1.3. Contains Svelte 5 hot-reload dynamic module capabilities.",
-  "pub_date": "2026-07-01T03:00:17Z",
+  "version": "0.1.5",
+  "notes": "Automated desktop package release for version v0.1.5. Contains Svelte 5 hot-reload dynamic module capabilities.",
+  "pub_date": "2026-07-01T03:19:27Z",
   "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRU2svK3dBWmNOOFRCMldiaVdGQVFWak8xVzJ0SnFaeXRlaXVmTWF5U0Zhc0RuUmsrcUR0WFlxV3JNUFgzOC9LMExqalg4c2piNk1RS3dmYk9JcFdPaEN4bGw3NThUZHdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyODc2MTM2CWZpbGU6ZXJwLWFnZW50XzAuMS41X3g2NF9lbi1VUy5tc2kKRmFOdEVlcDdmaE8rUXd1UmpHcmNrK3A2MWE3c1hGMWkxMXZERkVmL0IzNGcxcHZKSG0zTGltdUlnSDNPTVJINHVTRjVqbXV1K2FpWGYyMnl1UzRDREE9PQo=",
+      "url": "https://github.com/NumaxOfficee8/agent-erp/releases/download/v0.1.5/erp-agent_0.1.5_x64_en-US.msi"
+    },
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRU2svK3dBWmNOOGM4ZlBqc3VZV1h3TlN0ajBsOGY0dHNJK0txZ0xLM3JuM0FwNlZPcVRvM3dIM1BiMjF6MlFVQklXME1sSEVFbUFCdmFaaFBkTGMxNTFSR08wVGF5U1FFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyODc0ODE2CWZpbGU6ZXJwLWFnZW50LmFwcC50YXIuZ3oKbUJvbHMzTzl1RXdCbUFnVWRDYndaWGh3cUZiU0pINStmV3pNUE9NKzgxY3IzTlBWVlBCbUlQeXZNM083VWRER29WbUx6TjBRK3padzNWazdieGhiRHc9PQo=",
-      "url": "https://github.com/NumaxOfficee8/agent-erp/releases/download/v0.1.3/erp-agent_aarch64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRU2svK3dBWmNOOFZDaG14UGFjbkFwTndlWUE3UEhyQndFNmZ6SVhDTjVJcUFVUU03eUtYMUxxRTJqSEtheDcrY01RN3lMZlN0M2Fhb1V6VU5tVWRTaUJLUVpYYUdzbHdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyODc1OTY2CWZpbGU6ZXJwLWFnZW50LmFwcC50YXIuZ3oKb2N4Ykh1bUVDaEtBckZuOHlCR3dGaGlSNk53cU9LYkVIalMxSXdpQmhuNVNYYmE4c0E5QUtLa0JWcXBEZk5rdElEc2M2ZjhmUi82NkQ3b2xGSVlBRFE9PQo=",
+      "url": "https://github.com/NumaxOfficee8/agent-erp/releases/download/v0.1.5/erp-agent_aarch64.app.tar.gz"
     }
   }
 }
