@@ -1,9 +1,15 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tauri::{AppHandle, Manager, Emitter};
 use tauri::http::Response;
 
 mod downloader;
+mod auth;
+
+#[cfg(test)]
+thread_local! {
+    pub(crate) static TEST_DB_PATH: std::cell::RefCell<Option<PathBuf>> = std::cell::RefCell::new(None);
+}
 
 #[derive(serde::Serialize, Clone)]
 pub struct ChatResponseChunk {
@@ -12,17 +18,31 @@ pub struct ChatResponseChunk {
 }
 
 // Locate SQLite DB path in secure AppData folder
-fn get_db_path(app_handle: &AppHandle) -> PathBuf {
-    let mut path = app_handle.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
-    if !path.exists() {
-        let _ = fs::create_dir_all(&path);
+pub(crate) fn get_db_path<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>) -> PathBuf {
+    #[cfg(test)]
+    {
+        let _ = app_handle;
+        TEST_DB_PATH.with(|path| {
+            if let Some(ref p) = *path.borrow() {
+                p.clone()
+            } else {
+                PathBuf::from("target/agent_erp_test.db")
+            }
+        })
     }
-    path.push("agent_erp.db");
-    path
+    #[cfg(not(test))]
+    {
+        let mut path = app_handle.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
+        if !path.exists() {
+            let _ = fs::create_dir_all(&path);
+        }
+        path.push("agent_erp.db");
+        path
+    }
 }
 
 // Database Initialization (SQLite)
-fn init_db(app_handle: &AppHandle) -> Result<(), String> {
+fn init_db<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>) -> Result<(), String> {
     let db_path = get_db_path(app_handle);
     let conn = rusqlite::Connection::open(&db_path)
         .map_err(|e| format!("Failed to open DB: {}", e))?;
@@ -70,6 +90,46 @@ fn init_db(app_handle: &AppHandle) -> Result<(), String> {
         )",
         [],
     ).map_err(|e| format!("Failed to create audit_logs table: {}", e))?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            email TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL
+        )",
+        [],
+    ).map_err(|e| format!("Failed to create users table: {}", e))?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS tenants (
+            id TEXT PRIMARY KEY,
+            code TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            company_name TEXT NOT NULL
+        )",
+        [],
+    ).map_err(|e| format!("Failed to create tenants table: {}", e))?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS user_tenants (
+            user_id TEXT NOT NULL,
+            tenant_id TEXT NOT NULL,
+            role TEXT NOT NULL,
+            PRIMARY KEY (user_id, tenant_id)
+        )",
+        [],
+    ).map_err(|e| format!("Failed to create user_tenants table: {}", e))?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS sessions (
+            token TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            active_tenant_id TEXT,
+            created_at INTEGER NOT NULL
+        )",
+        [],
+    ).map_err(|e| format!("Failed to create sessions table: {}", e))?;
+
 
     // Seed mock order if empty
     let mut stmt = conn.prepare("SELECT count(*) FROM mirrored_orders").map_err(|e| e.to_string())?;
@@ -404,7 +464,10 @@ pub fn run() {
             downloader::install_module,
             downloader::get_installed_modules,
             downloader::get_module_source,
-            downloader::uninstall_module
+            downloader::uninstall_module,
+            auth::api_call,
+            auth::get_auth_status,
+            auth::logout
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
