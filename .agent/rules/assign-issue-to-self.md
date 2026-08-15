@@ -6,7 +6,7 @@ description: Rule to assign the active GitHub Issue to the agent during evaluati
 # GitHub Issue Auto-Assignment Rule
 
 Whenever you are given a GitHub Issue to evaluate, plan, or implement:
-1. **Assign the issue to yourself** immediately before starting the planning or execution phase.
+1. 在確認 Issue 內容與規格已定案（非草稿或討論階段），且即將開始規劃或執行階段前，將該 Issue **指派給自己**。
 2. Use the GitHub CLI `gh` to assign it:
    ```bash
    gh issue edit <issue-number> --add-assignee @me

@@ -2,6 +2,10 @@
 
 本文件摘要說明在不同開發階段與情境下，AI Agent 應參考並遵守的相關規範檔案（位於 `.agent/rules/` 目錄下）。
 
+> [!IMPORTANT]
+> 實作規格與 DoD 以 GitHub issue 內容為準，issue 由架構規劃流程（見專案根目錄 [`CLAUDE.md`](../CLAUDE.md)）產出，不要自行重新詮釋需求。
+
+
 ## 1. 協作與開發階段 (Development Stages)
 
 - **啟動任務、評估需求或開始規劃時**：

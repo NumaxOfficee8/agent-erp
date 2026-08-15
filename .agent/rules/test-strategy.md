@@ -19,6 +19,7 @@ These rules define the testing process that must be followed when implementing o
 2. The table must include at least the following columns: `Case ID`, `Input / Precondition`, `Perspective (Equivalence / Boundary)`, `Expected Result`, `Notes`.
 3. Rows must cover normal cases, error cases, and boundary value cases. For boundary values, include at minimum `0 / minimum / maximum / ±1 / empty / NULL`.
    Boundary value candidates (0 / minimum / maximum / ±1 / empty / NULL) that have no meaning in the specification may be omitted with the reason stated in `Notes`.
+   此外，若為 API 或業務錯誤情境，邊界值案例應優先取材自專案 [`testing-verification.md`](../../docs/standards/testing-verification.md) 中的「已知錯誤碼邊界」（例如 `IAM_ERR_*` 系列），以保持錯誤情境設計的一致性。
 4. If you notice missing perspectives later, update the table after self-review and add necessary cases.
 5. Note that for minor modifications to existing tests (message adjustments, minor expected value corrections, etc.) where no new branches or constraints are added, creating/updating the test perspective table is optional.
 
@@ -68,6 +69,7 @@ Write comments directly above the test code or within steps to keep the scenario
 1. For cases where exceptions occur, explicitly verify the exception **type** and **message**.
 2. For validation error cases, also verify error codes and field information if available.
 3. When simulating external dependency failures, use stubs/mocks to verify that expected exceptions/retries/fallbacks are called.
+4. 針對外部依賴的 mock/stub，在 Rust 測試中應優先依據 [`rust-backend.md`](../../docs/standards/rust-backend.md) 定義的 trait 抽象（例如 `TokenStore`）注入記憶體版假實作，不得任意設計自訂的 mocking 慣例，以確保測試替身寫法的統一性。
 
 ---
 
