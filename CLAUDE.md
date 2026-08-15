@@ -21,6 +21,14 @@ TPS2 是我們整合的外部後端（Go + Clean Architecture/DDD），分析／
 
 ---
 
+## 與實作 Agent（Antigravity）的分工
+
+`.agent/rules/` 是負責實作的 Antigravity agent 的規則，跟本檔案分開維護，分工如下：
+
+- **規格來源**：架構規劃、規格定義、DoD 都由本檔案定義的角色（Claude）產出，落實成 GitHub issue；Antigravity 依 issue 內容實作，不重新詮釋需求。
+- **測試依據共用**：Antigravity 寫測試時，邊界值/錯誤碼取材自 `docs/standards/testing-verification.md`；mock/stub 依 `docs/standards/rust-backend.md` 定義的 trait 抽象注入假實作，不要兩邊各自發明一套。
+- **Commit / PR 格式**：所有貢獻者（含 Claude 自己 commit 文件時）一律遵循 `.agent/rules/commit-message-format.md`、`.agent/rules/pr-message-format.md` 的格式，不要各行其是。
+
 ## 開發流程
 
 - **依 milestone 開 feature branch**：目前 M1（帳號與租戶起步）的開發都在 `m1-account-tenant-onboarding` branch 進行，不要直接在 `main` 上開發功能；等 M1 全部完成才合併回 `main`。之後新的 milestone 比照這個模式，各自開一條 branch。
