@@ -11,6 +11,7 @@
     installUpdate,
     fetchModulesGallery,
     installModuleAction,
+    uninstallModuleAction,
     navigate,
     checkAuthStatus,
     logoutAction
