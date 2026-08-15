@@ -193,10 +193,14 @@ async fn mock_dispatch<R: tauri::Runtime>(
                     }
 
                     let mock_token = format!("mock-token-{}", id);
-                    let active_tenant_id = tenants
-                        .first()
-                        .and_then(|t| t.get("id"))
-                        .and_then(|v| v.as_str());
+                    let active_tenant_id = if tenants.len() == 1 {
+                        tenants
+                            .first()
+                            .and_then(|t| t.get("id"))
+                            .and_then(|v| v.as_str())
+                    } else {
+                        None
+                    };
 
                     conn.execute(
                         "INSERT OR REPLACE INTO sessions (token, user_id, active_tenant_id, created_at)
@@ -880,5 +884,71 @@ mod tests {
 
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "IAM_ERR_TENANT_NOT_ASSIGNED");
+    }
+
+    #[tokio::test]
+    async fn test_login_multi_tenant_requires_selection() {
+        let handle = setup_test_db();
+        let db_path = crate::get_db_path(&handle);
+        let conn = rusqlite::Connection::open(&db_path).unwrap();
+
+        // Seed user with 2 tenants
+        conn.execute(
+            "INSERT INTO users (id, email, password) VALUES ('u1', 'test@example.com', ?1)",
+            [hash_password("password123")],
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO tenants (id, code, name, company_name) VALUES ('tnt1', 'tenant1', 'Tenant 1', 'Company 1')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO tenants (id, code, name, company_name) VALUES ('tnt2', 'tenant2', 'Tenant 2', 'Company 2')",
+            [],
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO user_tenants (user_id, tenant_id, role) VALUES ('u1', 'tnt1', 'admin')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO user_tenants (user_id, tenant_id, role) VALUES ('u1', 'tnt2', 'member')",
+            [],
+        )
+        .unwrap();
+
+        // Perform login
+        let req_body = json!({
+            "email": "test@example.com",
+            "password": "password123"
+        });
+        let login_res = api_call(
+            handle.clone(),
+            "POST".to_string(),
+            "/v1/auth/login".to_string(),
+            req_body,
+        )
+        .await;
+        assert!(login_res.is_ok());
+
+        // Get auth status
+        let status_res = get_auth_status(handle).await;
+        assert!(status_res.is_ok());
+
+        let status_val = status_res.unwrap();
+        // The user has multiple tenants, so they should need selection and activeTenant must be null
+        assert_eq!(
+            status_val.get("status").unwrap().as_str().unwrap(),
+            "needs_tenant_selection"
+        );
+        assert!(status_val.get("activeTenant").unwrap().is_null());
+        assert_eq!(
+            status_val.get("tenants").unwrap().as_array().unwrap().len(),
+            2
+        );
     }
 }
