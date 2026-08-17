@@ -111,24 +111,30 @@ async fn call_real_tps2(
         .map_err(|e| format!("auth: HTTP request failed: {}", e))?;
 
     let status = res.status();
-    if status == reqwest::StatusCode::UNAUTHORIZED {
-        return Err("IAM_ERR_INVALID_CREDENTIALS".to_string());
-    }
-
-    let json_res: Value = res
-        .json()
+    let text = res
+        .text()
         .await
-        .map_err(|e| format!("auth: Failed to parse JSON response: {}", e))?;
+        .map_err(|e| format!("auth: Failed to read response body: {}", e))?;
+
+    let json_res: Option<Value> = serde_json::from_str(&text).ok();
 
     if !status.is_success() {
         let err_reason = json_res
-            .get("reason")
+            .as_ref()
+            .and_then(|v| v.get("reason"))
             .and_then(|v| v.as_str())
-            .unwrap_or("UNKNOWN_ERROR");
+            .unwrap_or_else(|| {
+                if status == reqwest::StatusCode::UNAUTHORIZED {
+                    "IAM_ERR_INVALID_CREDENTIALS"
+                } else {
+                    "UNKNOWN_ERROR"
+                }
+            });
         return Err(err_reason.to_string());
     }
 
-    Ok(json_res)
+    let json_val = json_res.ok_or_else(|| "auth: Empty or invalid JSON response".to_string())?;
+    Ok(json_val)
 }
 
 // Local mock dispatch handling
@@ -501,7 +507,7 @@ pub async fn api_call<R: tauri::Runtime>(
             Ok(response_val)
         }
         Err(err) => {
-            if err == "IAM_ERR_INVALID_CREDENTIALS" {
+            if path != "/v1/auth/login" && err == "IAM_ERR_INVALID_CREDENTIALS" {
                 let _ = delete_secure_token("access_token");
                 let _ = delete_secure_token("refresh_token");
             }
@@ -1173,27 +1179,24 @@ mod tests {
 
     #[test]
     fn test_keychain_save_get_clear_roundtrip() {
-        // Given: a test keyring entry
-        use keyring::Entry;
-        let service = "agent-erp-auth-test";
+        // Given: test key and password
         let key = "test_key";
         let password = "test_password_value";
 
-        let entry = Entry::new(service, key).unwrap();
-        let _ = entry.delete_password(); // Clear any pre-existing state
+        let _ = delete_secure_token(key);
 
         // When: saving the password
-        entry.set_password(password).unwrap();
+        set_secure_token(key, password).unwrap();
 
         // Then: we should retrieve the same password
-        let retrieved = entry.get_password().unwrap();
+        let retrieved = get_secure_token(key).unwrap();
         assert_eq!(retrieved, password);
 
         // When: deleting the password
-        entry.delete_password().unwrap();
+        delete_secure_token(key).unwrap();
 
         // Then: retrieving it should fail
-        assert!(entry.get_password().is_err());
+        assert!(get_secure_token(key).is_err());
     }
 
     #[tokio::test]
@@ -1265,5 +1268,36 @@ mod tests {
         // And: Keychain tokens should be automatically cleared
         assert!(get_secure_token("access_token").is_err());
         assert!(get_secure_token("refresh_token").is_err());
+    }
+
+    #[tokio::test]
+    async fn test_api_call_login_failure_does_not_clear_keychain() {
+        // Given: setup test database, seed previous active token
+        let handle = setup_test_db();
+        set_secure_token("access_token", "mock-token-prev").unwrap();
+        set_secure_token("refresh_token", "mock-refresh-prev").unwrap();
+
+        // When: login fails with invalid credentials
+        let res = api_call(
+            handle,
+            "POST".to_string(),
+            "/v1/auth/login".to_string(),
+            json!({
+                "email": "test@example.com",
+                "password": "wrong_password"
+            }),
+        )
+        .await;
+
+        // Then: api_call should return IAM_ERR_INVALID_CREDENTIALS error
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "IAM_ERR_INVALID_CREDENTIALS");
+
+        // And: the previous token should STILL exist (not cleared)
+        assert_eq!(get_secure_token("access_token").unwrap(), "mock-token-prev");
+        assert_eq!(
+            get_secure_token("refresh_token").unwrap(),
+            "mock-refresh-prev"
+        );
     }
 }

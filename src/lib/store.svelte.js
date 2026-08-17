@@ -417,7 +417,7 @@ export async function apiCall(method, path, body = {}) {
     return await invoke('api_call', { method, path, body });
   } catch (err) {
     const errMsg = err?.message || err || '';
-    if (errMsg === 'IAM_ERR_INVALID_CREDENTIALS' || errMsg.toString().includes('401') || errMsg.toString().includes('UNAUTHENTICATED')) {
+    if (path !== '/v1/auth/login' && (errMsg === 'IAM_ERR_INVALID_CREDENTIALS' || errMsg.toString().includes('401') || errMsg.toString().includes('UNAUTHENTICATED'))) {
       showToast('登入已過期');
       appState.authStatus = 'unauthenticated';
       appState.authUser = null;
